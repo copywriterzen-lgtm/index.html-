@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Free AI 4K Upscaler</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 50px; background: #f4f4f9; }
+        #container { background: white; padding: 30px; border-radius: 15px; display: inline-block; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        canvas { max-width: 100%; margin-top: 20px; border: 1px solid #ddd; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
+        button:disabled { background: #ccc; }
+    </style>
+</head>
+<body>
+
+    <div id="container">
+        <h1>AI Image Upscaler</h1>
+        <p>Upload an image to turn it into High Res (4x)</p>
+        
+        <input type="file" id="upload" accept="image/*"><br><br>
+        <button id="upscale-btn">Upscale to 4K</button>
+        
+        <div id="status"></div>
+        <div id="result"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@upscalerjs/default-model@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/upscaler@latest"></script>
+
+    <script>
+        const upscaleBtn = document.getElementById('upscale-btn');
+        const upload = document.getElementById('upload');
+        const status = document.getElementById('status');
+        const resultDiv = document.getElementById('result');
+
+        // Initialize the AI
+        const upscaler = new Upscaler();
+
+        upscaleBtn.onclick = async () => {
+            if (!upload.files[0]) return alert("Please select an image first!");
+
+            const img = new Image();
+            img.src = URL.createObjectURL(upload.files[0]);
+            
+            img.onload = async () => {
+                status.innerHTML = "🚀 AI is working... please wait (Uses your GPU)";
+                upscaleBtn.disabled = true;
+
+                try {
+                    // This command tells the browser to upscale the image 4x
+                    const upscaledImgSrc = await upscaler.upscale(img);
+                    
+                    const newImg = new Image();
+                    newImg.src = upscaledImgSrc;
+                    resultDiv.innerHTML = "<h3>Success! Right-click to save:</h3>";
+                    resultDiv.appendChild(newImg);
+                    status.innerHTML = "Done!";
+                } catch (err) {
+                    status.innerHTML = "Error: " + err.message;
+                }
+                upscaleBtn.disabled = false;
+            };
+        };
+    </script>
+</body>
+</html>
