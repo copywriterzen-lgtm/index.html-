@@ -146,9 +146,53 @@ const upscaler = new Upscaler();
     // 1. Check user count from browser memory
     let upscaleCount = localStorage.getItem('upscale_count') || 0;
 
-    fileInput.onchange = () => {
-        document.getElementById('file-label').innerText = "Ready: " + fileInput.files[0].name;
+    const fileInput = document.getElementById('file-input');
+    const dropZone = document.getElementById('drop-zone');
+    const fileLabel = document.getElementById('file-label');
+
+    // This handles the "Gallery/File Picker" selection
+    fileInput.onchange = (e) => {
+        if (e.target.files.length > 0) {
+            handleFile(e.target.files[0]);
+        }
     };
+
+    // This handles the "Drag and Drop" action
+    dropZone.ondragover = (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = "#00ff88";
+    };
+
+    dropZone.ondrop = (e) => {
+        e.preventDefault();
+        if (e.dataTransfer.files.length > 0) {
+            handleFile(e.dataTransfer.files[0]);
+        }
+    };
+
+    // The main function to put the image in the area
+    function handleFile(file) {
+        // 1. Show the name of the file
+        fileLabel.innerText = "Selected: " + file.name;
+        fileLabel.style.color = "#00ff88";
+
+        // 2. Preview the image inside the drop zone (Optional but looks "Big")
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            dropZone.style.backgroundImage = `url(${e.target.result})`;
+            dropZone.style.backgroundSize = "contain";
+            dropZone.style.backgroundRepeat = "no-repeat";
+            dropZone.style.backgroundPosition = "center";
+            // Hide the text so the image looks clean
+            fileLabel.style.opacity = "0.2"; 
+        };
+        reader.readAsDataURL(file);
+
+        // 3. Very important: Attach the file to the input so the "Start" button can find it
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        fileInput.files = dataTransfer.files;
+    }
 
     btn.onclick = async () => {
         const file = fileInput.files[0];
