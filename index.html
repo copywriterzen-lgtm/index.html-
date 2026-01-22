@@ -135,42 +135,98 @@
 </footer>
 
 <script>
-    const upscaler = new Upscaler();
+const upscaler = new Upscaler();
     const btn = document.getElementById('process-btn');
     const fileInput = document.getElementById('file-input');
     const status = document.getElementById('status');
+    const resSelect = document.getElementById('res-select');
+
+    const SECRET_PRO_KEY = "PRO8K_2026";
+
+    // 1. Check user count from browser memory
+    let upscaleCount = localStorage.getItem('upscale_count') || 0;
 
     fileInput.onchange = () => {
         document.getElementById('file-label').innerText = "Ready: " + fileInput.files[0].name;
-        document.getElementById('file-label').style.color = "#00ff88";
     };
 
     btn.onclick = async () => {
         const file = fileInput.files[0];
-        const val = document.getElementById('res-select').value;
-        
-        if(!file) return alert("Please upload an image first.");
-        if(val > 4) return alert("High-Res (6K/8K) requires a Pro Subscription. Switching to 4K...");
+        const val = resSelect.value;
+        const isPro = localStorage.getItem('isProUser') === 'true';
+
+        if(!file) return alert("Please upload an image!");
+
+        // 2. Check for 8K Pro Lock
+        if(val == "8" && !isPro) {
+            const key = prompt("8K is Pro. Enter Key or pay to unlock:");
+            if(key === SECRET_PRO_KEY) {
+                localStorage.setItem('isProUser', 'true');
+                alert("Pro Unlocked!");
+            } else {
+                return alert("Invalid Key!");
+            }
+        }
 
         btn.disabled = true;
-        status.innerText = "Initializing AI Models... [Step 1/3]";
-        
+        status.innerText = "AI Processing...";
+
         const img = new Image();
         img.src = URL.createObjectURL(file);
-        
+
         img.onload = async () => {
-            status.innerText = "Enhancing Pixels with Deep Learning... [Step 2/3]";
             try {
                 const upscaledSrc = await upscaler.upscale(img);
-                const finalImg = new Image();
-                finalImg.src = upscaledSrc;
-                finalImg.style.width = "100%";
                 
-                document.getElementById('image-container').appendChild(finalImg);
-                document.getElementById('result-display').style.display = "block";
-                status.innerText = "Process Complete! [Step 3/3]";
+                // 3. Increment count
+                upscaleCount++;
+                localStorage.setItem('upscale_count', upscaleCount);
+
+                // 4. Create a Canvas to add Watermark
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const resultImg = new Image();
+                resultImg.src = upscaledSrc;
+
+                resultImg.onload = () => {
+                    canvas.width = resultImg.width;
+                    canvas.height = resultImg.height;
+                    ctx.drawImage(resultImg, 0, 0);
+
+                    // 5. Apply Watermark if count > 3 and NOT Pro
+                    if(upscaleCount > 3 && !isPro) {
+                        ctx.font = `${canvas.width / 15}px Arial`;
+                        ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+                        ctx.textAlign = "center";
+                        // Draw watermark multiple times
+                        ctx.fillText("AI ULTRA-RES WATERMARK", canvas.width/2, canvas.height/2);
+                        ctx.fillText("PAY TO REMOVE", canvas.width/2, canvas.height/2 + 100);
+                        
+                        document.getElementById('image-container').innerHTML = 
+                            "<p style='color:orange'>Free limit reached! Image has watermark. <a href='#pricing' style='color:cyan'>Go Pro to remove.</a></p>";
+                    } else {
+                        document.getElementById('image-container').innerHTML = "<h3>Success! No Watermark.</h3>";
+                    }
+
+                    // 6. Final Output
+                    const finalDataUrl = canvas.toDataURL("image/png");
+                    const finalDisplayImg = new Image();
+                    finalDisplayImg.src = finalDataUrl;
+                    finalDisplayImg.style.width = "100%";
+
+                    const dlBtn = document.createElement('a');
+                    dlBtn.href = finalDataUrl;
+                    dlBtn.download = "upscaled.png";
+                    dlBtn.innerHTML = "<button class='btn-main'>Download Image</button>";
+
+                    document.getElementById('image-container').appendChild(finalDisplayImg);
+                    document.getElementById('image-container').appendChild(dlBtn);
+                    document.getElementById('result-display').style.display = "block";
+                    status.innerText = "";
+                    btn.disabled = false;
+                };
             } catch (e) {
-                status.innerText = "Error: Image too large for browser memory.";
+                status.innerText = "Error: Too large!";
                 btn.disabled = false;
             }
         };
